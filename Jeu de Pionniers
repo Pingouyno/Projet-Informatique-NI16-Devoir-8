@@ -1,0 +1,513 @@
+import sys
+import pygame
+import random
+import time
+
+WHITE = (255,255,255)
+BLACK = (0,0,0)
+BROWN = (144,86,17)
+BEIGE = (214,203,130)
+
+def draw_pawn(x,y,color):
+    pygame.draw.polygon(screen,color,[[x,y-20],[x-23,y+40],[x+23,y+40]])
+    pygame.draw.circle(screen,color,[x,y-24],18,)
+
+def draw_board(lng,nb):
+    ratio=lng//nb
+    x=0
+    y=lng-ratio
+    cpt=0
+    sautcase=nb//2
+    
+    pygame.draw.rect(screen,BROWN,(0,0,lng,lng))
+    for i in range(0,nb):
+        if cpt%2==0:
+            x=0
+        else:
+            x=ratio
+        cpt=cpt+1
+        for i in range(0,sautcase+1):
+            pygame.draw.rect(screen,BEIGE,(x,y,ratio,ratio))
+            x=x+(2*ratio)
+        y=y-ratio
+        
+def draw_position(tab):
+    for i in range(pawn_cpt):         
+        if tab[i].col==WHITE:
+            draw_pawn(tab[i].x,tab[i].y,WHITE)
+        elif tab[i].col==BLACK:
+            draw_pawn(tab[i].x,tab[i].y,BLACK)
+
+    
+def set_position(FEN,echic):
+    compt=0
+    num=0
+    for i in FEN: 
+        if i=="W":
+            tab.append(pawn(num,WHITE,echic[compt].x,echic[compt].y)) 
+            compt=compt+1
+            num=num+1
+        elif i=="B":
+            tab.append(pawn(pawn_cpt,BLACK,echic[compt].x,echic[compt].y))
+            compt=compt+1
+            num=num+1
+        elif i!="/":
+            compt=compt+int(i)
+
+            
+
+def legal_check_white(av,ap,color,pion):
+
+    legal=[False,"0",0]
+        
+    if av[0]==ap[0]+100 and av[1]==ap[1]+100:
+        legal[0]=True
+        
+    elif av[0]==ap[0]-100 and av[1]==ap[1]+100:
+        legal[0]=True
+        
+    elif av[0]==ap[0] and av[1]==ap[1]+100:
+        legal[0],legal[1]=True,"avance"
+
+    if legal[0]==True:
+        for i in range(pawn_cpt):
+            if ap==[tab[i].x,tab[i].y] and tab[i]!=tab[pion]:
+                legal[0]=False
+                if legal[1]=="avance" and tab[pion].col!=tab[i].col:
+                    legal=[True,"capture",color]
+    
+    return legal
+
+
+
+def legal_check_black(av,ap,color,pion):
+
+    legal=[False,"0",0]
+
+    if av[0]==ap[0]+100 and av[1]==ap[1]-100:
+            legal[0]=True
+        
+    elif av[0]==ap[0]-100 and av[1]==ap[1]-100:
+            legal[0]=True
+        
+    elif av[0]==ap[0] and av[1]==ap[1]-100:
+            legal[0],legal[1]=True,"avance"
+
+
+    if legal[0]==True:
+        
+        for i in range(pawn_cpt):
+            if ap==[tab[i].x,tab[i].y] and tab[i]!=tab[pion]:
+                legal[0]=False
+                if legal[1]=="avance" and tab[pion].col!=tab[i].col:
+                    legal=[True,"capture",color]
+                            
+                    
+                                   
+    return legal
+
+def calc_pos_ap(pos_av): #Pour déterminer les coups possibles légaux après saisie de l'ordi.
+    pos_ap=[[0,0],[0,0],[0,0]]
+
+    pos_ap[0][0]=pos_av[0]-100
+    pos_ap[0][1]=pos_av[1]+100
+    pos_ap[1][0]=pos_av[0]
+    pos_ap[1][1]=pos_av[1]+100
+    pos_ap[2][0]=pos_av[0]+100
+    pos_ap[2][1]=pos_av[1]+100
+
+    return pos_ap
+
+    
+def check_insta_capture(cpt):
+    legal=[False,"0"]
+    for g1 in range(cpt):
+        for g2 in range(cpt):
+            if tab[g1].x==tab[g2].x and tab [g1].y==tab[g2].y-100 and tab[g1].col!=tab[g2].col and legal[0]==False and tab[g1].x<600 and tab[g1].col!=play_color:
+                legal=[True,"insta-capture"]
+                
+                tab[g1].x,tab[g1].y=tab[g2].x,tab[g2].y
+                tab[g2].x=2000
+    return(legal)
+
+
+def defence_algorithm(ap,cpt,num):
+    legal=True
+    for i in range(cpt-1):
+        
+        if tab[i].x==ap[0] and tab[i].y==ap[1]+100 and tab[i].col==play_color:
+            legal=False
+            
+            for f in range(cpt-1):
+                if tab[f].x==ap[0] and tab[f].y==ap[1]-100 and tab[f].col!=play_color and tab[f].num!=tab[num].num:
+                    legal=True
+
+        if tab[i].x==tab[num].x and tab[i].y==tab[num].y+200 and tab[i].col==play_color:
+            legal=False
+            
+    return legal
+
+
+def back_defence(nb_turn,pawn):
+    x=False
+    
+    if nb_turn<=pawn_cpt//2:
+        if pawn.y==50:
+            x=True
+    return x
+    
+
+
+def check_insta_win(legal,cpt):
+    play=False
+    for i in range(cpt-1):
+        if tab[i].x<2000 and tab[i].col!=play_color and not play:
+            
+            if tab[i].y==ValMini-350 or tab[i].y==ValMini-250 or tab[i].y==ValMini-150:
+
+                legal[0]=True
+                
+                for f in range(cpt-1):
+                    
+                    if tab[f].col==tab[i].col and tab[f].x==tab[i].x and tab[f].y==tab[i].y+100:
+                        legal[0]=False
+                    
+                    if tab[f].x==tab[i].x and tab[f].col==play_color and tab[f].x<2000:
+                        if tab[f].y==tab[i].y+200:          
+                            legal[0]=False
+
+                    if tab[i].x==ValMini-50 and tab[f].col==play_color and tab[f].y==tab[i].y+100:
+                        legal[0]=False  
+
+
+                if legal[0]:
+                    tamp=i
+            
+        if legal[0] and not play:
+            play=True
+            tab[tamp].y=tab[tamp].y+100
+
+    return legal
+            
+
+def play_move(cpt,col):
+
+        legal=[False,"0"]
+
+        legal=check_insta_capture(cpt)
+    
+        if not legal[0]:
+            legal=check_insta_win(legal,cpt)
+            
+        if not legal[0]:
+
+            while not legal[0]:
+                
+                found_pawn=False
+                while not found_pawn:
+
+                    rand=random.randint(0,cpt-1)
+                
+                    if tab[rand].col!=col and tab[rand].x<ValMini and not back_defence(play_turn,tab[rand]):
+                        found_pawn=True
+                    
+                pos_av = [tab[rand].x,tab[rand].y]
+                
+                pos_ap = calc_pos_ap(pos_av)
+
+                lis_coup=[0,1,2]
+                random.shuffle(lis_coup)
+                for i in lis_coup:
+                    
+                    if legal[0]!=True:
+                        
+                        if pos_ap[i][0]>0 and pos_ap[i][0]<ValMini:
+                            
+                            legal[0]=True
+                            
+                            for f in range(cpt-1):
+                                
+                                if pos_ap[i]==[tab[f].x,tab[f].y]:
+                                    legal[0]=False
+                                    
+                            if legal[0]==True:
+
+                                if defence_algorithm(pos_ap[i],cpt,rand)==True:
+                                    tab[rand].x,tab[rand].y=pos_ap[i][0],pos_ap[i][1]
+                                else:
+                                    legal[0]=False
+                                
+
+                                    
+class pawn():
+    def __init__(self,num,col,x,y):
+        self.num=num
+        self.col=col
+        self.x=x
+        self.y=y
+
+class square():
+    def __init__(self,nb,x,y):
+        self.nb=nb
+        self.x=x
+        self.y=y
+    
+print()
+print("Bienvenue au jeu de Pionniers! Dans ce jeu de pions, chaque joueur joue à tour de "
+      "rôle. Les Pionniers peuvent avancer d'une case à la fois, en diagonale ou en ligne droite. "
+      "Un Pionnier peut capturer une pièce ennemie si celle-ci se trouve droit devant lui. "
+      "Le vainqueur est le premier qui parvient à mener l'un de ses Pionniers jusqu'au rang "
+      "arrière ennemi. Bonne chance!")
+
+print()
+print("Voulez-vous jouer contre un ami ou contre l'ordinateur?")
+
+ordi=[]
+mode="0"
+while ordi==[]:
+    mode=input('"ami","ordi"? : ')
+    if mode=='Ami' or mode=='ami' or mode=='AMI':
+        ordi=False
+    elif mode=='Ordi' or mode=='ordi' or mode=='ORDI':
+        ordi=True
+    else:
+        print()
+        print("Mode choisi invalide, veuillez réessayer.")
+        
+print()
+print("Vous allez affronter un",mode,".")
+print()
+print("Veuillez choisir une couleur à jouer.")
+
+
+play_color=0
+while play_color == 0:
+    couleur=input('"blancs","noirs" ou "aléatoire"? : ')
+    if couleur=='blancs' or couleur=='Blancs' or couleur=='BLANCS':
+        play_color=WHITE
+    elif couleur=='noirs' or couleur=='Noirs' or couleur=='NOIRS':
+        play_color=BLACK
+    elif couleur=='aléatoire' or couleur=='Aléatoire' or couleur=='ALÉATOIRE':
+        if random.randint(1,2)==1:
+            play_color=WHITE
+        else:
+            play_color=BLACK
+    else:
+        print()
+        print("Couleur invalide, veuillez réessayer.")
+        
+if play_color==WHITE:
+    couleur="blancs"
+    play_turn=0
+elif play_color==BLACK:
+    couleur="noirs"
+    play_turn=1
+  
+
+print()
+print("C'est parti! Vous avez les",couleur,'.')
+
+WIDTH=600
+HEIGHT=600
+
+if WIDTH>=HEIGHT:
+    ValMini=HEIGHT
+else:
+    ValMini=WIDTH
+LenBoard=ValMini//100
+
+game_over=False
+tab=[]
+echic=[]
+stock=[0,0]
+compare1,compare2=[0,0],[0,0]
+memo=[50,50]
+compt=0
+pawn_cpt=0
+click=0
+play_turn=0
+pion=0
+
+for y in range(0,ValMini,100):
+       for x in range(0,ValMini,100):
+           echic.append(square(compt,x+50,y+50))
+           compt=compt+1
+           
+if play_color==WHITE:
+    if not ordi:
+        FEN="BBBBBB/BBBBBB/6/6/WWWWWW/WWWWWW"
+    else:
+        FEN="BBBBBB/BBBBBB/6/6/W1WW1W/WWWWWW"
+        
+elif play_color==BLACK:
+    
+    if not ordi:   
+        FEN="WWWWWW/WWWWWW/6/6/BBBBBB/BBBBBB"
+    else:
+        FEN="WWWWWW/WWWWWW/6/6/B1BB1B/BBBBBB"
+
+set_position(FEN,echic)
+
+for i in tab:
+    pawn_cpt=pawn_cpt+1
+
+pygame.init()
+screen = pygame.display.set_mode((WIDTH,HEIGHT))
+
+if ordi==1 and play_color == BLACK:
+    play_move(pawn_cpt,play_color)
+    play_turn=play_turn+1
+
+while not game_over:
+    for event in pygame.event.get():
+        
+        if click==1:
+            tab[pion].x=pygame.mouse.get_pos()[0]
+            tab[pion].y=pygame.mouse.get_pos()[1]
+
+            
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                pygame.display.quit(), sys.exit()
+                
+        if event.type == pygame.MOUSEBUTTONDOWN:
+                for i in range(2):
+                    stock[i]=(pygame.mouse.get_pos()[i])
+                    stock[i]=(stock[i]-(stock[i]%100))+50
+                    compare1[i]=stock[i]
+                for i in range(pawn_cpt):
+                    if tab[i].x==stock[0] and tab[i].y==stock[1]:
+                        pion=i
+                        memo=tab[pion].x,tab[pion].y
+                click=1
+                        
+        if event.type == pygame.MOUSEBUTTONUP:
+            for i in range(2):
+                stock[i]=(pygame.mouse.get_pos()[i])
+                stock[i]=(stock[i]-(stock[i]%100))+50
+                compare2[i]=stock[i]
+
+            legal=[0,"0",0]
+            
+            if couleur=="blancs":
+                if play_turn%2==0:
+
+                    if tab[pion].col==WHITE:
+                        legal=legal_check_white(compare1,compare2,tab[pion].col,pion)
+                        
+                elif tab[pion].col==BLACK:
+                    legal=legal_check_black(compare1,compare2,tab[pion].col,pion)
+
+
+            elif couleur=="noirs":
+                
+                if play_turn%2==0:
+
+                    if tab[pion].col==WHITE:
+                        legal=legal_check_black(compare1,compare2,tab[pion].col,pion)
+              
+                elif tab[pion].col==BLACK:
+                    legal=legal_check_white(compare1,compare2,tab[pion].col,pion)
+                    
+
+            
+            if legal[0]==True:
+                if legal[1]=="capture":
+                    for i in range(pawn_cpt):
+                        if compare2[0]==tab[i].x and compare2[1]==tab[i].y:
+                            tab[i].x=2000
+                            
+                tab[pion].x=compare2[0]
+                tab[pion].y=compare2[1]
+                play_turn=play_turn+1
+                
+                pygame.draw.rect(screen,WHITE,(0,0,WIDTH,HEIGHT))
+                draw_board(ValMini,LenBoard)
+                draw_position(tab)
+                draw_pawn(tab[pion].x,tab[pion].y,tab[pion].col)
+                pygame.display.update()
+                
+                
+                
+                if couleur == "blancs":
+                    for i in range(pawn_cpt):
+                        if tab[i].col==WHITE and tab[i].y==50:
+                            game_over=True
+                            win="blancs"
+                        elif tab[i].col==BLACK and tab[i].y==ValMini-50:
+                            game_over=True
+                            win="noirs"
+                            
+
+                    
+                if couleur == "noirs":
+                    for i in range(pawn_cpt):
+                        if tab[i].col==BLACK and tab[i].y==50:
+                            game_over=True
+                            win="noirs"
+                        elif tab[i].col==WHITE and tab[i].y==ValMini-50:
+                            game_over=True
+                            win="blancs"
+
+
+                if ordi and not game_over:
+                    time.sleep(1)
+                    play_move(pawn_cpt,play_color)
+                    play_turn=play_turn+1
+
+                    
+                    if couleur == "blancs":
+                        for i in range(pawn_cpt):
+                            if tab[i].col==WHITE and tab[i].y==50:
+                                game_over=True
+                                win="blancs"
+                            elif tab[i].col==BLACK and tab[i].y==ValMini-50:
+                                game_over=True
+                                win="noirs"
+                            
+                    if couleur == "noirs":
+                        for i in range(pawn_cpt):
+                            if tab[i].col==BLACK and tab[i].y==50:
+                                game_over=True
+                                win="noirs"
+                            elif tab[i].col==WHITE and tab[i].y==ValMini-50:
+                                game_over=True
+                                win="blancs"
+
+
+                aucun_blanc=True
+                aucun_noir=True
+                for i in range(pawn_cpt):
+                    
+                    if tab[i].col==BLACK and tab[i].x<2000:
+                        aucun_noir=False
+                        
+                    elif tab[i].col==WHITE and tab[i].x<2000:
+                        aucun_blanc=False
+
+
+                if aucun_noir:
+                    game_over=True
+                    win="blancs"
+                    
+                elif aucun_blanc:
+                    game_over=True
+                    win="noirs"
+                    
+                
+            elif not legal[0]:    
+                tab[pion].x=memo[0]
+                tab[pion].y=memo[1]
+            click=0
+            
+                
+    pygame.draw.rect(screen,WHITE,(0,0,WIDTH,HEIGHT))
+    draw_board(ValMini,LenBoard)
+    draw_position(tab)
+    draw_pawn(tab[pion].x,tab[pion].y,tab[pion].col)
+    pygame.display.update()
+
+time.sleep(2)
+pygame.display.quit()
+print()
+print("La partie est terminée. Les",win,"sont victorieux.")
+sys.exit()
